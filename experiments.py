@@ -5,7 +5,10 @@ import math
 import timeit
 import networkx as nx
 import matplotlib.pyplot as plt
-
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn import tree
 
 def gnp_random_connected_graph(num_of_nodes,completeness,draw=False):
     """
@@ -154,4 +157,54 @@ def visual(completeness):
     ax.legend(handles=[l1, l2], loc='upper right')
     plt.ylabel(f'time(s), completeness={completeness}')
     plt.xlabel('number of nodes')
+    plt.show()
+
+def decision_tree():
+    """
+    creates visualisation of decision tree of graphs with
+    different number of nodes and probability of connection
+    """
+    list2 = [10, 20, 50, 100]
+    probability = [0.1, 0.25, 0.5, 0.75, 0.9]
+    X = []
+    Y = []
+    for prb in probability:
+        for nodes in list2:
+            graph, nodes = create_graph(nodes,p)
+            start = timeit.default_timer()
+            kruskal(graph)
+            stop = timeit.default_timer()
+            time = stop-start
+            X.append([nodes, prb, time])
+            Y.append(0)
+
+        for nodes in list2:
+            graph, nodes = create_graph(nodes,p)
+            graph[0][2] = math.inf
+            start = timeit.default_timer()
+            prim(graph, nodes)
+            stop = timeit.default_timer()
+            X.append([nodes, prb, time])
+            Y.append(1)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, random_state=0)
+    clf = DecisionTreeClassifier(max_leaf_nodes=5, random_state=0)
+    clf.fit(X_train, y_train)
+    n_nodes = clf.tree_.node_count
+    children_left = clf.tree_.children_left
+    children_right = clf.tree_.children_right
+    node_depth = np.zeros(shape=n_nodes, dtype=np.int64)
+    is_leaves = np.zeros(shape=n_nodes, dtype=bool)
+    stack = [(0, 0)]
+    while len(stack) > 0:
+        node_id, depth = stack.pop()
+        node_depth[node_id] = depth
+        is_split_node = children_left[node_id] != children_right[node_id]
+        if is_split_node:
+            stack.append((children_left[node_id], depth + 1))
+            stack.append((children_right[node_id], depth + 1))
+        else:
+            is_leaves[node_id] = True
+    tree.plot_tree(clf, feature_names=['number of nodes', 'probability', 'time'],\
+        class_names=['kruskal', 'prima'])
     plt.show()
